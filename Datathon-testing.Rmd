@@ -1,0 +1,140 @@
+---
+title: "Datathon Testing doc"
+author: "Team 34 - Ananya Trivedi, Omkaar Kamath, Amy Lai"
+date: "11/20/2021"
+output: pdf_document
+---
+
+```{r setup}
+setwd("./") # Run this line to setup environment
+print(getwd())
+```
+
+# Data Retreival
+```{r}
+gdp.ds <- read.csv("datathon_data/gdp.csv", header=TRUE,
+   sep=",")
+
+co2.emissions <- read.csv("datathon_data/co2.emissions.csv", header=TRUE,
+   sep=",")
+
+obesity <- read.csv("datathon_data/obesity.csv", header=TRUE,
+   sep=",")
+```
+
+# Data Cleaning and Manimpulation
+## Cleaning gdp dataset
+```{r}
+gdp.ds <- gdp.ds[c(1:28)]
+gdp <- gdp.ds[-2]
+```
+```{r}
+gdp <- gdp[complete.cases(gdp), ]
+rownames(gdp) <- NULL
+colnames(gdp) <- c("Country", 1990:2015)
+
+Country <- c()
+for (i in unique(gdp["Country"])) {
+  Country <- c(Country, rep(i, each=26))
+}
+
+Year <- c()
+for (i in unique(gdp["Country"])) {
+  Year <- c(Year, 1990:2015)
+}
+
+gdp.per.capita <- c()
+cunch <- 0
+i <- 0
+for (cunch in gdp[["Country"]]) {
+  i = i + 1
+  for (year in colnames(gdp)[2:ncol(gdp)]) {
+    gdp.per.capita <- c(gdp.per.capita, gdp[i, ][[year]])
+  }
+}
+
+gdp <- data.frame(Country, Year, gdp.per.capita)
+```
+
+## Cleaning co2.emissions dataset
+```{r}
+co2.emm <- co2.emissions[,c(1,c(32:57))]
+```
+```{r}
+co2.emm <- co2.emm[complete.cases(co2.emm), ]
+rownames(co2.emm) <- NULL
+colnames(co2.emm) <- c("Country", 1990:2015)
+
+Country <- c()
+for (i in unique(co2.emm["Country"])) {
+  Country <- c(Country, rep(i, each=26))
+}
+
+Year <- c()
+for (i in unique(co2.emm["Country"])) {
+  Year <- c(Year, 1990:2015)
+}
+
+emissions <- c()
+cunch <- 0
+i <- 0
+for (cunch in co2.emm[["Country"]]) {
+  i = i + 1
+  for (year in colnames(co2.emm)[2:ncol(co2.emm)]) {
+    emissions <- c(emissions, co2.emm[i, ][[year]])
+  }
+}
+
+co2.emm <- data.frame(Country, Year, emissions)
+```
+
+## Cleaning obesity dataset
+```{r}
+obesity <- subset(obesity, (obesity$Year <= 2015 & obesity$Year >= 1990))
+obesity[, "Obesity_pr"] <- unlist(lapply(strsplit(obesity[, "Obesity...."], " "), `[[`, 1))
+obesity.both <- obesity["Obesity_pr"][obesity["Sex"] == "Both sexes"]
+obesity.male <- obesity["Obesity_pr"][obesity["Sex"] == "Male"]
+obesity.female <- obesity["Obesity_pr"][obesity["Sex"] == "Female"]
+rownames(obesity) <- NULL
+
+Country <- c()
+for (i in unique(obesity["Country"])) {
+  Country <- c(Country, rep(i, 26))
+}
+Country <- sort(Country)
+
+Year <- rep(c(1990:2015), times=195)
+
+obesity <- data.frame(Country, Year, obesity.both, obesity.male, obesity.female)
+obesity$Country[obesity["Country"] == "United States of America"] <- "United States"
+obesity
+```
+
+# Data Merging
+```{r}
+# We decided to merge by countries (select from a distribution of gdp)
+selected.countries = sort(c("Algeria", "Denmark", "South Africa", "Armenia", "Portugal", "Brazil", "Mexico", "Albania", "India", "United States", "China", "Canada", "Bangladesh", "Australia", "Japan", "Indonesia", "France", "Italy", "Singapore", "Turkey"))
+
+co2.vals <- c()
+obesity.both.vals <- c()
+obesity.male.vals <- c()
+obesity.female.vals <- c()
+gdp.vals <- c()
+for(cunch in selected.countries) {
+   co2.vals <- c(co2.vals, co2.emm$emissions[co2.emm["Country"] == cunch])
+   obesity.both.vals <- c(obesity.both.vals, obesity$obesity.both[obesity["Country"] == cunch])
+   obesity.male.vals <- c(obesity.male.vals, obesity$obesity.male[obesity["Country"] == cunch])
+   obesity.female.vals <- c(obesity.female.vals, obesity$obesity.female[obesity["Country"] == cunch])
+   gdp.vals <- c(gdp.vals, gdp$gdp.per.capita[gdp["Country"] == cunch])
+}
+
+Country <- rep(selected.countries, each=26)
+Year <- rep(c(1990:2015), times=length(selected.countries))
+
+merged.df <- data.frame(Country, Year, co2.vals, obesity.both.vals, obesity.male.vals, obesity.female.vals, gdp.vals)
+head(merged.df, 100)
+```
+
+# Data Exploration
+## Growth of attributes over time
+## Multi-variate analysis with lines of different colors for countries 
